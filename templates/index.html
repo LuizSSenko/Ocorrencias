@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!doctype html>
 <html lang="pt">
 <head>
@@ -22,13 +23,73 @@
     a.sort-link:hover {
       background-color: #eaeaea;
     }
+    /* Estilo para o link ou botão de impressão */
+    .imprimir-link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background-color: #007BFF;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+    .imprimir-link:hover {
+      background-color: #0056b3;
+    }
+    /* Estilos para o formulário de filtro para impressão */
+    .filtro-impressao {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    .filtro-impressao label {
+      margin-right: 10px;
+    }
+    .filtro-impressao input, .filtro-impressao select {
+      margin-right: 20px;
+    }
   </style>
 </head>
 <body>
   <h1>Ocorrências</h1>
   
   <button onclick="toggleNovaOcorrencia()">Nova ocorrência</button>
+  
+  <!-- Formulário de filtro para impressão -->
+  <div class="filtro-impressao">
+    <form action="{{ url_for('imprimir_ocorrencias') }}" method="get" target="_blank">
+      <label for="tipo">Tipo da Ocorrência:</label>
+      <select name="tipo" id="tipo">
+        <option value="">Todos</option>
+        <option value="Acidentes de Trabalho">Acidentes de Trabalho</option>
+        <option value="Acidentes de trânsito">Acidentes de trânsito</option>
+        <option value="Conflito com terceiros">Conflito com terceiros</option>
+        <option value="Conflitos Internos">Conflitos Internos</option>
+        <option value="Dano ao patrimônio">Dano ao patrimônio</option>
+        <option value="Falhas Operacionais">Falhas Operacionais</option>
+        <option value="Incidentes Ambientais">Incidentes Ambientais</option>
+        <option value="Incidentes de Segurança">Incidentes de Segurança</option>
+        <option value="Problemas de Infraestrutura">Problemas de Infraestrutura</option>
+      </select>
+      
+      <label for="estado">Estado:</label>
+      <select name="estado" id="estado">
+        <option value="">Todos</option>
+        <option value="Pendente">Pendente</option>
+        <option value="Concluída">Concluída</option>
+      </select>
+      
+      <label for="data_inicio">Data de entrada (Início):</label>
+      <input type="text" name="data_inicio" id="data_inicio" placeholder="dd/mm/aaaa">
+      
+      <label for="data_fim">Data de entrada (Fim):</label>
+      <input type="text" name="data_fim" id="data_fim" placeholder="dd/mm/aaaa">
+      
+      <button type="submit">Imprimir Ocorrências</button>
+    </form>
+  </div>
 
+  <!-- Formulário para nova ocorrência -->
   <div id="nova-ocorrencia-container">
     <h2>Nova Ocorrência</h2>
     <form id="novaOcorrenciaForm" action="{{ url_for('nova_ocorrencia') }}" method="post" enctype="multipart/form-data" onsubmit="return prepareFiles();">
@@ -48,6 +109,12 @@
               <option value="Incidentes de Segurança">Incidentes de Segurança</option>
               <option value="Problemas de Infraestrutura">Problemas de Infraestrutura</option>
             </select>
+          </td>
+        </tr>
+        <tr>
+          <th>Resumo:</th>
+          <td>
+            <input type="text" name="resumo" maxlength="50" placeholder="Resumo (máx 50 caracteres)" required>
           </td>
         </tr>
         <tr>
@@ -81,6 +148,7 @@
     </form>
   </div>
 
+  <!-- Tabela de ocorrências -->
   <table>
     <thead>
       <tr>
@@ -100,7 +168,7 @@
         <th>
           <a class="sort-link" title="Clique para ordenar/agrupar por Tipo da Ocorrência" 
              href="{{ url_for('index', sort_by='tipo', order=( 'asc' if selected_sort_by != 'tipo' or selected_order == 'desc' else 'desc' )) }}">
-            Tipo de Ocorrência
+            Tipo da Ocorrência
             {% if selected_sort_by == 'tipo' %}
               {% if selected_order == 'asc' %}
                 &#9650;
@@ -110,6 +178,8 @@
             {% endif %}
           </a>
         </th>
+        <th>Resumo</th>
+        <th>Data de entrada</th>
         <th>
           <a class="sort-link" title="Clique para ordenar/agrupar por Estado" 
              href="{{ url_for('index', sort_by='estado', order=( 'asc' if selected_sort_by != 'estado' or selected_order == 'desc' else 'desc' )) }}">
@@ -143,6 +213,8 @@
       <tr>
         <td><a href="{{ url_for('ocorrencia', ocorrencia_id=o.id) }}">{{ o.numero }}</a></td>
         <td>{{ o.tipo }}</td>
+        <td>{{ o.resumo[:50] if o.resumo else "Sem resumo" }}</td>
+        <td>{{ o.data_envio }}</td>
         <td class="{% if o.estado == 'Pendente' %}pendente{% else %}concluida{% endif %}">{{ o.estado }}</td>
         <td>{{ o.atualizado }}</td>
       </tr>

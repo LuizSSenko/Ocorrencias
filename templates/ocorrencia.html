@@ -11,7 +11,24 @@
     .comentarios a { margin-right: 10px; }
     .descricao { white-space: pre-wrap; }
     .comentario-texto { white-space: pre-wrap; }
-    .botao-especial { margin-right: 10px; }
+    form.inline { display: inline; }
+    select.inline-select { font-size: 1em; padding: 2px; }
+    .editable-display {
+      cursor: pointer;
+      /* Sem underline */
+      padding-right: 5px;
+    }
+    .editable-icon {
+      cursor: pointer;
+      font-size: 0.9em;
+      margin-left: 3px;
+      color: #d3d3d3;
+    }
+    /* Estilização do input inline para Resumo */
+    input.inline-input {
+      font-size: 1em;
+      padding: 2px;
+    }
   </style>
 </head>
 <body>
@@ -25,12 +42,48 @@
     </tr>
     <tr>
       <th>Tipo da Ocorrência</th>
-      <td>{{ ocorrencia.tipo }}</td>
+      <td>
+        <form action="{{ url_for('alterar_tipo', ocorrencia_id=ocorrencia.id) }}" method="post" class="inline" id="form-tipo">
+          <span id="display-tipo" class="editable-display" onclick="toggleSelect('tipo')">{{ ocorrencia.tipo }}</span>
+          <span id="icon-tipo" class="editable-icon" onclick="toggleSelect('tipo')">&#9660;</span>
+          <select name="tipo" class="inline-select" id="select-tipo" style="display:none;" onchange="submitSelect('tipo')" onblur="toggleSelect('tipo')">
+            <option value="Acidentes de Trabalho" {% if ocorrencia.tipo == 'Acidentes de Trabalho' %}selected{% endif %}>Acidentes de Trabalho</option>
+            <option value="Acidentes de trânsito" {% if ocorrencia.tipo == 'Acidentes de trânsito' %}selected{% endif %}>Acidentes de trânsito</option>
+            <option value="Conflito com terceiros" {% if ocorrencia.tipo == 'Conflito com terceiros' %}selected{% endif %}>Conflito com terceiros</option>
+            <option value="Conflitos Internos" {% if ocorrencia.tipo == 'Conflitos Internos' %}selected{% endif %}>Conflitos Internos</option>
+            <option value="Dano ao patrimônio" {% if ocorrencia.tipo == 'Dano ao patrimônio' %}selected{% endif %}>Dano ao patrimônio</option>
+            <option value="Falhas Operacionais" {% if ocorrencia.tipo == 'Falhas Operacionais' %}selected{% endif %}>Falhas Operacionais</option>
+            <option value="Incidentes Ambientais" {% if ocorrencia.tipo == 'Incidentes Ambientais' %}selected{% endif %}>Incidentes Ambientais</option>
+            <option value="Incidentes de Segurança" {% if ocorrencia.tipo == 'Incidentes de Segurança' %}selected{% endif %}>Incidentes de Segurança</option>
+            <option value="Problemas de Infraestrutura" {% if ocorrencia.tipo == 'Problemas de Infraestrutura' %}selected{% endif %}>Problemas de Infraestrutura</option>
+          </select>
+        </form>
+      </td>
+    </tr>
+    <tr>
+      <th>Resumo</th>
+      <td>
+        <form action="{{ url_for('alterar_resumo', ocorrencia_id=ocorrencia.id) }}" method="post" class="inline" id="form-resumo">
+          <span id="display-resumo" class="editable-display" onclick="toggleInput('resumo')">
+            {{ ocorrencia.resumo if ocorrencia.resumo else "Sem resumo" }}
+          </span>
+          <span id="icon-resumo" class="editable-icon" onclick="toggleInput('resumo')">&#9998;</span>
+          <input type="text" name="resumo" id="input-resumo" class="inline-input" style="display:none;" value="{{ ocorrencia.resumo }}" maxlength="50">
+          <button type="button" id="btn-salvar-resumo" style="display:none;" onclick="submitInput('resumo')">Salvar</button>
+        </form>
+      </td>
     </tr>
     <tr>
       <th>Estado</th>
       <td class="{% if ocorrencia.estado == 'Pendente' %}pendente{% else %}concluida{% endif %}">
-        {{ ocorrencia.estado }}
+        <form action="{{ url_for('alterar_estado', ocorrencia_id=ocorrencia.id) }}" method="post" class="inline" id="form-estado">
+          <span id="display-estado" class="editable-display" onclick="toggleSelect('estado')">{{ ocorrencia.estado }}</span>
+          <span id="icon-estado" class="editable-icon" onclick="toggleSelect('estado')">&#9660;</span>
+          <select name="estado" class="inline-select" id="select-estado" style="display:none;" onchange="submitSelect('estado')" onblur="toggleSelect('estado')">
+            <option value="Pendente" {% if ocorrencia.estado == 'Pendente' %}selected{% endif %}>Pendente</option>
+            <option value="Concluída" {% if ocorrencia.estado == 'Concluída' %}selected{% endif %}>Concluída</option>
+          </select>
+        </form>
       </td>
     </tr>
     <tr>
@@ -75,97 +128,67 @@
     </tr>
   </table>
   
-  <!-- Formulário para alterar o estado -->
-  <h2>Alterar Estado</h2>
-  <form action="{{ url_for('alterar_estado', ocorrencia_id=ocorrencia.id) }}" method="post">
-    <select name="estado">
-      <option value="Pendente" {% if ocorrencia.estado == 'Pendente' %}selected{% endif %}>Pendente</option>
-      <option value="Concluída" {% if ocorrencia.estado == 'Concluída' %}selected{% endif %}>Concluída</option>
-    </select>
-    <button type="submit">Alterar Estado</button>
-  </form>
-  
-  <!-- Botão "Excluir Ocorrência" movido para abaixo da tabela -->
+  <!-- Botão de Excluir Ocorrência -->
   <div style="margin-top: 10px;">
     <form action="{{ url_for('excluir_ocorrencia', ocorrencia_id=ocorrencia.id) }}" method="post" onsubmit="return confirm('Tem certeza que deseja excluir esta ocorrência?');">
       <button type="submit">Excluir Ocorrência</button>
     </form>
   </div>
   
-  <br>
-
-  <h2>Comentários</h2>
-  <button onclick="toggleNovoComentario()">Adicionar comentário</button>
-  <div id="novo-comentario-container" style="display:none;">
-    <form action="{{ url_for('adicionar_comentario', ocorrencia_id=ocorrencia.id) }}" method="post">
-      <textarea id="novo-comentario-textarea" name="comentario" cols="50" rows="3" placeholder="Digite seu comentário" required></textarea><br>
-      <button type="submit">Salvar Comentário</button>
-      <button type="button" onclick="toggleNovoComentario()">Cancelar</button>
-    </form>
-  </div>
-
-  {% set comentarios = ocorrencia.get_comentarios() %}
-  {% if comentarios|length > 0 %}
-  <table class="comentarios">
-    <thead>
-      <tr>
-        <th>Comentário</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in comentarios %}
-      <tr>
-        <td>
-          <div id="comentario-texto-{{ loop.index0 }}" class="comentario-texto">{{ c.texto }}</div>
-          <a href="#" id="editar-link-{{ loop.index0 }}" onclick="toggleEditorComentario({{ loop.index0 }}); return false;">[Editar]</a>
-          <div id="editor-container-{{ loop.index0 }}" style="display:none;">
-            <form action="{{ url_for('editar_comentario', ocorrencia_id=ocorrencia.id, comentario_index=loop.index0) }}" method="post">
-              <textarea name="comentario" cols="50" rows="5">{{ c.texto }}</textarea><br>
-              <button type="submit">Salvar</button>
-              <button type="button" onclick="toggleEditorComentario({{ loop.index0 }});">Cancelar</button>
-            </form>
-            <br>
-          </div>
-          <br>
-          <small>
-            {{ c.data }}
-            {% if c.editado %}
-              - <em>Editado em: {{ c.editado }}</em>
-            {% endif %}
-          </small>
-          <br>
-          <form action="{{ url_for('excluir_comentario', ocorrencia_id=ocorrencia.id, comentario_index=loop.index0) }}" method="post" style="display:inline;" onsubmit="return confirm('Deseja remover este comentário?');">
-            <button type="submit">Remover</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-
-  <h2>Histórico desta Ocorrência</h2>
-  {% set historico = ocorrencia.get_historico() %}
-  <table>
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Evento</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for h in historico %}
-      <tr>
-        <td>{{ h.data }}</td>
-        <td>{{ h.evento }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
   <a href="{{ url_for('index') }}">Voltar para a lista</a>
 
   <script>
+    // Funções para edição inline dos campos que usam <select>
+    function toggleSelect(field) {
+      var displayElem = document.getElementById('display-' + field);
+      var iconElem = document.getElementById('icon-' + field);
+      var selectElem = document.getElementById('select-' + field);
+      if (selectElem.style.display === 'none' || selectElem.style.display === '') {
+        selectElem.style.display = 'inline';
+        displayElem.style.display = 'none';
+        iconElem.style.display = 'none';
+        selectElem.focus();
+      } else {
+        selectElem.style.display = 'none';
+        displayElem.style.display = 'inline';
+        iconElem.style.display = 'inline';
+      }
+    }
+    
+    function submitSelect(field) {
+      var form = document.getElementById('form-' + field);
+      form.submit();
+    }
+    
+    // Funções para edição inline de campos tipo input (no caso do Resumo)
+    function toggleInput(field) {
+      var displayElem = document.getElementById('display-' + field);
+      var iconElem = document.getElementById('icon-' + field);
+      var inputElem = document.getElementById('input-' + field);
+      var btnSalvar = document.getElementById('btn-salvar-' + field);
+      if (inputElem.style.display === 'none' || inputElem.style.display === '') {
+        // Exibe o campo de edição e o botão salvar
+        inputElem.style.display = 'inline';
+        btnSalvar.style.display = 'inline';
+        displayElem.style.display = 'none';
+        iconElem.style.display = 'none';
+        inputElem.focus();
+      } else {
+        // Oculta o campo de edição, atualiza o texto exibido
+        displayElem.textContent = inputElem.value || "Sem resumo";
+        inputElem.style.display = 'none';
+        btnSalvar.style.display = 'none';
+        displayElem.style.display = 'inline';
+        iconElem.style.display = 'inline';
+      }
+    }
+
+    function submitInput(field) {
+      var form = document.getElementById('form-' + field);
+      form.submit();
+    }
+    
+    // Funções para edição da descrição (já existentes)
     function toggleEditor() {
       var editor = document.getElementById('editor-container');
       var descricaoTexto = document.getElementById('descricao-texto');
@@ -178,31 +201,6 @@
         editor.style.display = 'none';
         descricaoTexto.style.display = 'block';
         editarLink.style.display = 'inline';
-      }
-    }
-
-    function toggleEditorComentario(index) {
-      var editor = document.getElementById('editor-container-' + index);
-      var texto = document.getElementById('comentario-texto-' + index);
-      var link = document.getElementById('editar-link-' + index);
-      if (editor.style.display === 'none') {
-        editor.style.display = 'block';
-        texto.style.display = 'none';
-        link.style.display = 'none';
-      } else {
-        editor.style.display = 'none';
-        texto.style.display = 'block';
-        link.style.display = 'inline';
-      }
-    }
-    
-    function toggleNovoComentario() {
-      var container = document.getElementById('novo-comentario-container');
-      if (container.style.display === 'none' || container.style.display === '') {
-        container.style.display = 'block';
-        document.getElementById('novo-comentario-textarea').focus();
-      } else {
-        container.style.display = 'none';
       }
     }
   </script>

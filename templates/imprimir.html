@@ -1,0 +1,86 @@
+<!-- imprimir.html -->
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Imprimir Ocorrências</title>
+  <style>
+    /* Evita que uma ocorrência seja dividida entre páginas na impressão */
+    @media print {
+      .ocorrencia {
+        page-break-inside: avoid;
+      }
+    }
+    .ocorrencia {
+      border: 1px solid #000;
+      margin-bottom: 20px;
+      padding: 10px;
+    }
+    .campo {
+      margin-bottom: 5px;
+    }
+    /* Container para agrupar as imagens em duas colunas */
+    .imagens-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .imagem-item {
+      width: calc(30% - 10px); /* Ajusta para exibir duas imagens por linha */
+      box-sizing: border-box;
+    }
+    .imagem-item img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ocorrências</h1>
+  {% for o in ocorrencias %}
+  <div class="ocorrencia">
+    <div class="campo"><strong>Número da Ocorrência:</strong> {{ o.numero }}</div>
+    <div class="campo"><strong>Estado:</strong> {{ o.estado }}</div>
+    <div class="campo"><strong>Data de Envio:</strong> {{ o.data_envio }}</div>
+    <div class="campo"><strong>Data da Última Atualização:</strong> {{ o.atualizado }}</div>
+    <div class="campo"><strong>Descrição:</strong> {{ o.descricao }}</div>
+    
+    <div class="campo"><strong>Comentários:</strong>
+      {% set comentarios = o.get_comentarios() %}
+      {% if comentarios|length > 0 %}
+        <ul>
+          {% for c in comentarios %}
+          <li>{{ c.data }} - {{ c.texto }}{% if c.editado %} (Editado em: {{ c.editado }}){% endif %}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        Nenhum comentário.
+      {% endif %}
+    </div>
+    
+    <div class="campo"><strong>Imagens Anexadas:</strong>
+      {% set arquivos = o.get_arquivos() %}
+      {% if arquivos|length > 0 %}
+        <div class="imagens-container">
+          {% for arquivo in arquivos %}
+            <div class="imagem-item">
+              <img src="{{ url_for('uploaded_file', filename=arquivo['nome']) }}" alt="{{ arquivo['nome'] }}">
+              <br>
+              <small>{{ arquivo['nome'] }} - {{ arquivo['upload_data'] }}</small>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        Nenhuma imagem anexada.
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  
+  <script>
+    // Dispara a impressão automaticamente
+    window.print();
+  </script>
+</body>
+</html>

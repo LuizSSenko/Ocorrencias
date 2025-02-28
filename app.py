@@ -1,3 +1,5 @@
+
+# app.py
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 import os, json
@@ -23,17 +25,19 @@ class Ocorrencia(db.Model):
     atualizado = db.Column(db.String(50), nullable=False)
     data_envio = db.Column(db.String(50), nullable=False)
     descricao = db.Column(db.Text, nullable=False)
+    resumo = db.Column(db.String(50), nullable=True)  # novo atributo resumo
     arquivos = db.Column(db.Text, nullable=True)       # JSON com lista de anexos
     comentarios = db.Column(db.Text, nullable=True)      # JSON com lista de comentários
     historico = db.Column(db.Text, nullable=True)        # JSON com lista de eventos
 
-    def __init__(self, numero, tipo, estado, atualizado, data_envio, descricao, arquivos=None, comentarios=None, historico=None):
+    def __init__(self, numero, tipo, estado, atualizado, data_envio, descricao, resumo, arquivos=None, comentarios=None, historico=None):
         self.numero = numero
         self.tipo = tipo
         self.estado = estado
         self.atualizado = atualizado
         self.data_envio = data_envio
         self.descricao = descricao
+        self.resumo = resumo
         self.arquivos = json.dumps(arquivos) if arquivos is not None else json.dumps([])
         self.comentarios = json.dumps(comentarios) if comentarios is not None else json.dumps([])
         self.historico = json.dumps(historico) if historico is not None else json.dumps([])
@@ -87,6 +91,7 @@ def nova_ocorrencia():
     tipo = request.form.get('tipo')
     estado = request.form.get('estado')
     descricao = request.form.get('descricao')
+    resumo = request.form.get('resumo')  # Recupera o resumo do formulário
     data_atual = datetime.now().strftime("%d/%m/%Y %H:%M")
     novo_id = Ocorrencia.query.count() + 1
     numero = f"{novo_id:05d}"
@@ -99,10 +104,12 @@ def nova_ocorrencia():
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 arquivos.append({'nome': filename, 'upload_data': data_atual})
     historico = [{'data': data_atual, 'evento': 'Criação da Ocorrência'}]
-    nova = Ocorrencia(numero, tipo, estado, data_atual, data_atual, descricao, arquivos, [], historico)
+    # Note que agora passamos 'resumo' na posição correta
+    nova = Ocorrencia(numero, tipo, estado, data_atual, data_atual, descricao, resumo, arquivos, [], historico)
     db.session.add(nova)
     db.session.commit()
     return redirect(url_for('index'))
+
 
 @app.route('/ocorrencia/<int:ocorrencia_id>/editar', methods=['POST'])
 def editar_ocorrencia(ocorrencia_id):
@@ -173,6 +180,15 @@ def excluir_ocorrencia(ocorrencia_id):
     oc = Ocorrencia.query.get(ocorrencia_id)
     if oc is None:
         return "Ocorrência não encontrada", 404
+
+    # Remove os arquivos anexados, se existirem
+    arquivos = oc.get_arquivos()
+    for arquivo in arquivos:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], arquivo['nome'])
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    # Exclui a ocorrência do banco de dados
     db.session.delete(oc)
     db.session.commit()
     return redirect(url_for('index'))
@@ -196,6 +212,58 @@ def alterar_estado(ocorrencia_id):
         oc.set_historico(hist)
         db.session.commit()
     return redirect(url_for('ocorrencia', ocorrencia_id=ocorrencia_id))
+
+@app.route('/ocorrencia/<int:ocorrencia_id>/alterar_tipo', methods=['POST'])
+def alterar_tipo(ocorrencia_id):
+    oc = Ocorrencia.query.get(ocorrencia_id)
+    if oc is None:
+        return "Ocorrência não encontrada", 404
+    novo_tipo = request.form.get('tipo')
+    if novo_tipo and novo_tipo != oc.tipo:
+        oc.tipo = novo_tipo
+        oc.atualizado = datetime.now().strftime("%d/%m/%Y %H:%M")
+        hist = oc.get_historico()
+        hist.append({'data': oc.atualizado, 'evento': 'Tipo da ocorrência alterado'})
+        oc.set_historico(hist)
+        db.session.commit()
+    return redirect(url_for('ocorrencia', ocorrencia_id=ocorrencia_id))
+
+@app.route('/ocorrencia/<int:ocorrencia_id>/alterar_resumo', methods=['POST'])
+def alterar_resumo(ocorrencia_id):
+    oc = Ocorrencia.query.get(ocorrencia_id)
+    if oc is None:
+        return "Ocorrência não encontrada", 404
+    novo_resumo = request.form.get('resumo', '').strip()
+    oc.resumo = novo_resumo if novo_resumo else ""
+    oc.atualizado = datetime.now().strftime("%d/%m/%Y %H:%M")
+    hist = oc.get_historico()
+    hist.append({'data': oc.atualizado, 'evento': 'Resumo alterado'})
+    oc.set_historico(hist)
+    db.session.commit()
+    return redirect(url_for('ocorrencia', ocorrencia_id=ocorrencia_id))
+
+
+
+@app.route('/imprimir_ocorrencias')
+def imprimir_ocorrencias():
+    # Obter filtros via query string (ex.: ?data_inicio=01/01/2025&data_fim=31/01/2025&estado=Pendente&tipo=Acidentes de Trabalho)
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    estado = request.args.get('estado')
+    tipo = request.args.get('tipo')
+    
+    # Inicia a consulta
+    ocorrencias_query = Ocorrencia.query
+
+    # Exemplo simplificado de filtro por estado e tipo (ajuste conforme necessário para datas)
+    if estado:
+        ocorrencias_query = ocorrencias_query.filter(Ocorrencia.estado == estado)
+    if tipo:
+        ocorrencias_query = ocorrencias_query.filter(Ocorrencia.tipo == tipo)
+    
+    ocorrencias = ocorrencias_query.all()
+    return render_template('imprimir.html', ocorrencias=ocorrencias)
+
 
 if __name__ == '__main__':
     with app.app_context():
