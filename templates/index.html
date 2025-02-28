@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Ocorrências</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .pendente { background-color: #f8d7da; }
+    .concluida { background-color: #d4edda; }
+    #nova-ocorrencia-container { display: none; margin-top: 20px; }
+    .form-table { width: 100%; border-collapse: collapse; }
+    .form-table th, .form-table td { border: none; padding: 8px; text-align: left; }
+    #fileList div { margin: 5px 0; }
+    #fileList button { margin-left: 10px; }
+    a.sort-link {
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    a.sort-link:hover {
+      background-color: #eaeaea;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ocorrências</h1>
+  
+  <button onclick="toggleNovaOcorrencia()">Nova ocorrência</button>
+
+  <div id="nova-ocorrencia-container">
+    <h2>Nova Ocorrência</h2>
+    <form id="novaOcorrenciaForm" action="{{ url_for('nova_ocorrencia') }}" method="post" enctype="multipart/form-data" onsubmit="return prepareFiles();">
+      <table class="form-table">
+        <tr>
+          <th>Tipo da Ocorrência:</th>
+          <td>
+            <select name="tipo" required>
+              <option value="">Selecione um tipo</option>
+              <option value="Acidentes de Trabalho">Acidentes de Trabalho</option>
+              <option value="Acidentes de trânsito">Acidentes de trânsito</option>
+              <option value="Conflito com terceiros">Conflito com terceiros</option>
+              <option value="Conflitos Internos">Conflitos Internos</option>
+              <option value="Dano ao patrimônio">Dano ao patrimônio</option>
+              <option value="Falhas Operacionais">Falhas Operacionais</option>
+              <option value="Incidentes Ambientais">Incidentes Ambientais</option>
+              <option value="Incidentes de Segurança">Incidentes de Segurança</option>
+              <option value="Problemas de Infraestrutura">Problemas de Infraestrutura</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>Estado:</th>
+          <td>
+            <select name="estado">
+              <option value="Pendente">Pendente</option>
+              <option value="Concluída">Concluída</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>Descrição da Ocorrência:</th>
+          <td><textarea name="descricao" cols="50" rows="5" required></textarea></td>
+        </tr>
+        <tr>
+          <th>Anexar Arquivos:</th>
+          <td>
+            <button type="button" onclick="document.getElementById('fileInput').click();">Escolher arquivos</button>
+            <input type="file" id="fileInput" name="arquivos" style="display:none" multiple>
+            <div id="fileList"></div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <button type="submit">Salvar Ocorrência</button>
+            <button type="button" onclick="toggleNovaOcorrencia()">Cancelar</button>
+          </td>
+        </tr>
+      </table>
+    </form>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>
+          <a class="sort-link" title="Clique para ordenar/agrupar por Número da Ocorrência" 
+             href="{{ url_for('index', sort_by='numero', order=( 'asc' if selected_sort_by != 'numero' or selected_order == 'desc' else 'desc' )) }}">
+            Número da Ocorrência
+            {% if selected_sort_by == 'numero' %}
+              {% if selected_order == 'asc' %}
+                &#9650;
+              {% else %}
+                &#9660;
+              {% endif %}
+            {% endif %}
+          </a>
+        </th>
+        <th>
+          <a class="sort-link" title="Clique para ordenar/agrupar por Tipo da Ocorrência" 
+             href="{{ url_for('index', sort_by='tipo', order=( 'asc' if selected_sort_by != 'tipo' or selected_order == 'desc' else 'desc' )) }}">
+            Tipo de Ocorrência
+            {% if selected_sort_by == 'tipo' %}
+              {% if selected_order == 'asc' %}
+                &#9650;
+              {% else %}
+                &#9660;
+              {% endif %}
+            {% endif %}
+          </a>
+        </th>
+        <th>
+          <a class="sort-link" title="Clique para ordenar/agrupar por Estado" 
+             href="{{ url_for('index', sort_by='estado', order=( 'asc' if selected_sort_by != 'estado' or selected_order == 'desc' else 'desc' )) }}">
+            Estado
+            {% if selected_sort_by == 'estado' %}
+              {% if selected_order == 'asc' %}
+                &#9650;
+              {% else %}
+                &#9660;
+              {% endif %}
+            {% endif %}
+          </a>
+        </th>
+        <th>
+          <a class="sort-link" title="Clique para ordenar/agrupar por Atualizado" 
+             href="{{ url_for('index', sort_by='atualizado', order=( 'asc' if selected_sort_by != 'atualizado' or selected_order == 'desc' else 'desc' )) }}">
+            Atualizado
+            {% if selected_sort_by == 'atualizado' %}
+              {% if selected_order == 'asc' %}
+                &#9650;
+              {% else %}
+                &#9660;
+              {% endif %}
+            {% endif %}
+          </a>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in ocorrencias %}
+      <tr>
+        <td><a href="{{ url_for('ocorrencia', ocorrencia_id=o.id) }}">{{ o.numero }}</a></td>
+        <td>{{ o.tipo }}</td>
+        <td class="{% if o.estado == 'Pendente' %}pendente{% else %}concluida{% endif %}">{{ o.estado }}</td>
+        <td>{{ o.atualizado }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+    function toggleNovaOcorrencia() {
+      var container = document.getElementById('nova-ocorrencia-container');
+      container.style.display = (container.style.display === 'none' || container.style.display === '') ? 'block' : 'none';
+    }
+
+    var selectedFiles = [];
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      var files = event.target.files;
+      for (var i = 0; i < files.length; i++) {
+        selectedFiles.push(files[i]);
+      }
+      updateFileList();
+      event.target.value = '';
+    });
+
+    function updateFileList() {
+      var fileList = document.getElementById('fileList');
+      fileList.innerHTML = '';
+      for (var i = 0; i < selectedFiles.length; i++) {
+        var file = selectedFiles[i];
+        var div = document.createElement('div');
+        div.innerHTML = file.name + ' <button type="button" onclick="removeFile(' + i + ')">x</button>';
+        fileList.appendChild(div);
+      }
+    }
+
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      updateFileList();
+    }
+
+    function prepareFiles() {
+      var dt = new DataTransfer();
+      for (var i = 0; i < selectedFiles.length; i++) {
+        dt.items.add(selectedFiles[i]);
+      }
+      document.getElementById('fileInput').files = dt.files;
+      return true;
+    }
+  </script>
+</body>
+</html>
